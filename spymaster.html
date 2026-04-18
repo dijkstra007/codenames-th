@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Spymaster · Codenames</title>
+<meta name="description" content="หน้าสำหรับสายลับ — ดูสีกุญแจของเกม Codenames ภาษาไทย" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Noto+Serif+Thai:wght@700;800&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a1f'/%3E%3Cpath d='M8 10h16M8 16h16M8 22h10' stroke='%23e0b23c' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Spymaster-only tweaks */
+  .spy-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(15,15,18,.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .spy-brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .spy-badge {
+    font-family: var(--font-display);
+    font-size: 20px; font-weight: 800;
+    color: #e0b23c;
+  }
+  .spy-brand-sub { color: var(--text-mute); font-size: 12px; font-weight: 500; }
+
+  .spy-warn {
+    background: rgba(224,178,60,.12);
+    border: 1px solid rgba(224,178,60,.35);
+    color: #e0b23c;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin: 14px 22px 0;
+  }
+
+  .spy-main {
+    flex: 1;
+    padding: 18px 22px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+  }
+
+  .spy-board {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: 0;
+  }
+
+  /* Import / paste screen */
+  .import-screen {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  /* Ensure [hidden] beats our display:flex */
+  [hidden] { display: none !important; }
+  .import-card {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    padding: 36px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: var(--shadow-3);
+  }
+  .import-card h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    margin: 0 0 6px;
+    color: #e0b23c;
+  }
+  .import-card p {
+    color: var(--text-dim);
+    margin: 0 0 20px;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  .import-card textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    min-height: 110px;
+  }
+  .import-card textarea:focus { outline: none; border-color: var(--text-dim); }
+  .import-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+  .import-error {
+    color: #ff6b7a;
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+
+  @media (max-width: 900px) {
+    .spy-topbar { padding: 12px 14px; }
+    .spy-warn { margin: 10px 14px 0; font-size: 12px; padding: 8px 12px; }
+    .spy-main { padding: 12px; }
+    .spy-board { gap: 8px; }
+    .import-card { padding: 24px; }
+    .import-card h2 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="spy-topbar">
+  <div class="spy-brand">
+    <svg width="34" height="34" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="2" y="2" width="36" height="36" rx="7" fill="#e0b23c" opacity="0.12"/>
+      <path d="M12 16c0-4 3-7 8-7s8 3 8 7-3 7-8 7c-1 0-2-.1-2.9-.4L14 26l-2-2 3.3-3.3C13.2 19.4 12 17.8 12 16z" stroke="#e0b23c" stroke-width="2" fill="none"/>
+      <circle cx="20" cy="16" r="2" fill="#e0b23c"/>
+    </svg>
+    <div>
+      <div class="spy-badge">Spymaster</div>
+      <div class="spy-brand-sub" id="spySub">หน้าสำหรับสายลับ</div>
+    </div>
+  </div>
+  <div class="controls" id="spyControls" hidden>
+    <button class="btn btn-ghost" id="changeCodeBtn">เปลี่ยนรหัส</button>
+  </div>
+</header>
+
+<!-- Import screen (shown when no valid code in URL) -->
+<section class="import-screen" id="importScreen" hidden>
+  <div class="import-card">
+    <h2>วางรหัสจากผู้เล่น</h2>
+    <p>รับรหัส Base64 หรือลิงก์จากคนที่กดปุ่ม "แชร์ให้สายลับ" บนเครื่องหลัก แล้ววางด้านล่าง</p>
+    <textarea id="codeInput" placeholder="วางรหัสหรือลิงก์ที่นี่..."></textarea>
+    <div class="import-error" id="importError"></div>
+    <div class="import-actions">
+      <button class="btn btn-primary" id="loadBtn">โหลดกุญแจ</button>
+    </div>
+  </div>
+</section>
+
+<!-- Warning + board (shown when code loaded) -->
+<div class="spy-warn" id="spyWarn" hidden>⚠︎ เฉพาะสายลับเท่านั้น — อย่าให้ผู้เล่นคนอื่นเห็นหน้าจอนี้</div>
+<main class="spy-main" id="spyMain" hidden>
+  <div class="spy-board" id="spyBoard"></div>
+</main>
+
+<script>
+(function () {
+  const $importScreen = document.getElementById('importScreen');
+  const $importError  = document.getElementById('importError');
+  const $codeInput    = document.getElementById('codeInput');
+  const $loadBtn      = document.getElementById('loadBtn');
+  const $spyWarn      = document.getElementById('spyWarn');
+  const $spyMain      = document.getElementById('spyMain');
+  const $spyBoard     = document.getElementById('spyBoard');
+  const $spyControls  = document.getElementById('spyControls');
+  const $changeBtn    = document.getElementById('changeCodeBtn');
+  const $spySub       = document.getElementById('spySub');
+
+  const CHAR_TO_COLOR = { r: 'red', b: 'blue', n: 'neutral', a: 'assassin' };
+
+  function b64UrlToString(b64url) {
+    // Restore padding and standard alphabet
+    let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function extractCode(raw) {
+    const s = raw.trim();
+    if (!s) return '';
+    // If it's a URL, grab the hash
+    if (s.includes('#')) {
+      const hash = s.slice(s.indexOf('#') + 1);
+      return hash.trim();
+    }
+    return s;
+  }
+
+  function decodeGame(code) {
+    const json = b64UrlToString(code);
+    const data = JSON.parse(json);
+    if (!data || !Array.isArray(data.w) || typeof data.k !== 'string') {
+      throw new Error('รูปแบบข้อมูลไม่ถูกต้อง');
+    }
+    if (data.w.length !== 25 || data.k.length !== 25) {
+      throw new Error('จำนวนการ์ดไม่ครบ 25 ใบ');
+    }
+    const key = [];
+    for (const ch of data.k) {
+      const color = CHAR_TO_COLOR[ch];
+      if (!color) throw new Error('รหัสสีไม่ถูกต้อง');
+      key.push(color);
+    }
+    return { words: data.w, key };
+  }
+
+  function render(game) {
+    $spyBoard.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'key-cell ' + game.key[i];
+      cell.textContent = game.words[i];
+      $spyBoard.appendChild(cell);
+    }
+    // Count for subtitle
+    const counts = { red: 0, blue: 0, neutral: 0, assassin: 0 };
+    game.key.forEach(c => counts[c]++);
+    $spySub.textContent = `ทีมแดง ${counts.red} · ทีมน้ำเงิน ${counts.blue} · กลาง ${counts.neutral} · นักฆ่า ${counts.assassin}`;
+  }
+
+  function showGame(game) {
+    $importScreen.hidden = true;
+    $spyWarn.hidden = false;
+    $spyMain.hidden = false;
+    $spyControls.hidden = false;
+    render(game);
+  }
+
+  function showImport(errMsg) {
+    $importScreen.hidden = false;
+    $spyWarn.hidden = true;
+    $spyMain.hidden = true;
+    $spyControls.hidden = true;
+    $spySub.textContent = 'หน้าสำหรับสายลับ';
+    $importError.textContent = errMsg || '';
+    setTimeout(() => $codeInput.focus(), 50);
+  }
+
+  function tryLoadFromCode(rawInput) {
+    const code = extractCode(rawInput);
+    if (!code) {
+      showImport('กรุณาวางรหัสก่อน');
+      return;
+    }
+    try {
+      const game = decodeGame(code);
+      // Update hash so user can refresh and keep state
+      if (location.hash !== '#' + code) {
+        history.replaceState(null, '', location.pathname + '#' + code);
+      }
+      showGame(game);
+    } catch (e) {
+      showImport('ไม่สามารถอ่านรหัสได้: ' + (e && e.message ? e.message : 'รูปแบบไม่ถูกต้อง'));
+    }
+  }
+
+  // Boot: check URL hash first
+  const initial = location.hash.replace(/^#/, '').trim();
+  if (initial) {
+    tryLoadFromCode(initial);
+  } else {
+    showImport('');
+  }
+
+  // Import screen handlers
+  $loadBtn.addEventListener('click', () => tryLoadFromCode($codeInput.value));
+  $codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      tryLoadFromCode($codeInput.value);
+    }
+  });
+
+  // Change code button
+  $changeBtn.addEventListener('click', () => {
+    history.replaceState(null, '', location.pathname);
+    $codeInput.value = '';
+    showImport('');
+  });
+
+  // React to hash changes (e.g. pasted URL directly in address bar)
+  window.addEventListener('hashchange', () => {
+    const h = location.hash.replace(/^#/, '').trim();
+    if (h) tryLoadFromCode(h);
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -202,12 +202,19 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: transform var(--t-flip);
-  transform-style: preserve-3d;
+  /* Opaque background so the other face can never bleed through during flip */
+  background: var(--bg);
+  border-radius: var(--radius);
+  /* Force GPU compositing so paints during card animations don't affect siblings */
+  will-change: transform;
 }
 .board-front { transform: rotateY(0deg); }
-.board-back  { transform: rotateY(180deg); display: flex; flex-direction: column; gap: 10px; }
+.board-back  { transform: rotateY(180deg); display: flex; flex-direction: column; gap: 10px; padding: 0; }
 .board-stage.flipped .board-front { transform: rotateY(-180deg); }
 .board-stage.flipped .board-back  { transform: rotateY(0deg); }
+/* When a face isn't visible, make it inert so it can't receive events or paint */
+.board-stage:not(.flipped) .board-back { pointer-events: none; }
+.board-stage.flipped .board-front { pointer-events: none; }
 
 .board-front,
 .board-back .key-grid {
@@ -281,12 +288,14 @@ body {
   border-color: #000;
 }
 
-/* Reveal animation */
-.card.revealing { animation: flip .35s ease-out; }
-@keyframes flip {
-  0% { transform: rotateY(0) scale(1); }
-  50% { transform: rotateY(90deg) scale(.98); }
-  100% { transform: rotateY(0) scale(1); }
+/* Reveal animation — use 2D transform + opacity only.
+   Avoids 3D rotation on the card because the parent .board-stage already
+   uses 3D transforms, which caused ghost flicker on sibling cards. */
+.card.revealing { animation: cardReveal 360ms cubic-bezier(.2,.7,.3,1); }
+@keyframes cardReveal {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  45%  { transform: scale(.92);  filter: brightness(1.15); }
+  100% { transform: scale(1);    filter: brightness(1); }
 }
 
 /* ---------- key (spymaster) face ---------- */
@@ -367,6 +376,66 @@ body {
 .overlay-card.red h2  { color: var(--red); }
 .overlay-card.blue h2 { color: var(--blue); }
 .overlay-card p { color: var(--text-dim); margin: 0 0 24px; }
+
+/* ---------- share modal ---------- */
+.share-card {
+  max-width: 560px;
+  text-align: left;
+  padding: 32px;
+}
+.share-card h2 {
+  font-size: 26px;
+  margin-bottom: 6px;
+  text-align: left;
+}
+.share-help {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+.share-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin: 14px 0 6px;
+}
+.share-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.share-row input,
+.share-row textarea {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+  line-height: 1.4;
+}
+.share-row input:focus,
+.share-row textarea:focus {
+  outline: none;
+  border-color: var(--text-dim);
+}
+.share-row .btn {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.share-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {

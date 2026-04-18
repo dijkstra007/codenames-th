@@ -28,6 +28,34 @@ const $overlay      = document.getElementById('overlay');
 const $overlayCard  = document.getElementById('overlayCard');
 const $overlayTitle = document.getElementById('overlayTitle');
 const $overlaySub   = document.getElementById('overlaySub');
+const $shareBtn        = document.getElementById('shareBtn');
+const $shareOverlay    = document.getElementById('shareOverlay');
+const $shareLinkInput  = document.getElementById('shareLinkInput');
+const $shareCodeInput  = document.getElementById('shareCodeInput');
+const $copyLinkBtn     = document.getElementById('copyLinkBtn');
+const $copyCodeBtn     = document.getElementById('copyCodeBtn');
+const $shareCloseBtn   = document.getElementById('shareCloseBtn');
+
+// --- Share encoding ---
+// Encodes {w: [25 Thai words], k: "rbnarbnb..."} as URL-safe Base64.
+// k uses single letters: r=red, b=blue, n=neutral, a=assassin.
+const COLOR_TO_CHAR = { red: 'r', blue: 'b', neutral: 'n', assassin: 'a' };
+
+function encodeGame() {
+  const k = state.key.map(c => COLOR_TO_CHAR[c]).join('');
+  const json = JSON.stringify({ w: state.words, k });
+  // UTF-8 safe base64
+  const utf8 = new TextEncoder().encode(json);
+  let binary = '';
+  for (const byte of utf8) binary += String.fromCharCode(byte);
+  const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return b64;
+}
+
+function buildShareLink(code) {
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  return base + 'spymaster.html#' + code;
+}
 
 // --- Helpers ---
 function shuffle(arr) {
@@ -140,7 +168,11 @@ function revealCard(i) {
   const cardEl = $board.children[i];
   cardEl.classList.add('revealing');
   applyCardVisual(cardEl, i);
-  setTimeout(() => cardEl.classList.remove('revealing'), 400);
+  setTimeout(() => cardEl.classList.remove('revealing'), 360);
+
+  // Incrementally update just this one key cell (avoid rebuilding all 25)
+  const keyCell = $keyGrid.children[i];
+  if (keyCell) keyCell.classList.add('done');
 
   const color = state.key[i];
 
@@ -156,7 +188,6 @@ function revealCard(i) {
     // NOTE: Turn does NOT auto-switch — users toggle manually
   }
 
-  renderKey();
   renderStatus();
 }
 
@@ -209,6 +240,46 @@ $newGameBtn.addEventListener('click', () => {
   startFresh();
 });
 $overlayNewBtn.addEventListener('click', startFresh);
+
+// --- Share flow ---
+function openShare() {
+  const code = encodeGame();
+  const link = buildShareLink(code);
+  $shareLinkInput.value = link;
+  $shareCodeInput.value = code;
+  $shareOverlay.hidden = false;
+}
+
+function closeShare() {
+  $shareOverlay.hidden = true;
+}
+
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+  }
+  const orig = btn.textContent;
+  btn.textContent = 'คัดลอกแล้ว ✓';
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1400);
+}
+
+$shareBtn.addEventListener('click', openShare);
+$shareCloseBtn.addEventListener('click', closeShare);
+$shareOverlay.addEventListener('click', (e) => { if (e.target === $shareOverlay) closeShare(); });
+$copyLinkBtn.addEventListener('click', () => copyText($shareLinkInput.value, $copyLinkBtn));
+$copyCodeBtn.addEventListener('click', () => copyText($shareCodeInput.value, $copyCodeBtn));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$shareOverlay.hidden) closeShare();
+});
 
 // --- Boot ---
 newGame();
