@@ -514,13 +514,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 16px 0 8px;
-  padding: 12px;
+  margin: 12px 0 6px;
+  padding: 8px;
   background: #fff;
   border-radius: 14px;
 }
 .share-qr svg {
-  width: min(280px, 100%);
+  width: min(240px, 100%);
   height: auto;
   display: block;
 }
