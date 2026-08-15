@@ -9,6 +9,7 @@ import {
   otherTeam,
   undoReveal,
 } from './game.js';
+import { encodeQr, qrToSvg } from './qr.js';
 import { buildShareLink, encodeGame } from './share.js';
 
 const STRICT_KEY = 'codenames-th-strict';
@@ -37,6 +38,7 @@ const ui = {
   strict: loadStrict(),
 };
 let state = createBoard(THAI_WORDS);
+let shareLink = '';
 
 // --- DOM refs ---
 const $board         = document.getElementById('board');
@@ -59,7 +61,9 @@ const $overlayTitle  = document.getElementById('overlayTitle');
 const $overlaySub    = document.getElementById('overlaySub');
 const $shareBtn      = document.getElementById('shareBtn');
 const $shareOverlay  = document.getElementById('shareOverlay');
-const $shareLinkInput = document.getElementById('shareLinkInput');
+const $shareQr       = document.getElementById('shareQr');
+const $shareQrHint   = document.getElementById('shareQrHint');
+const $shareQrError  = document.getElementById('shareQrError');
 const $shareCodeInput = document.getElementById('shareCodeInput');
 const $copyLinkBtn   = document.getElementById('copyLinkBtn');
 const $copyCodeBtn   = document.getElementById('copyCodeBtn');
@@ -127,6 +131,7 @@ function newGame() {
   ui.flipped = false;
   clearClue();
   closeDialog($shareOverlay, { restore: false });
+  clearShare();
   closeDialog($overlay, { restore: false });
   $boardStage.classList.remove('flipped', 'flipping');
   $flipBtn.classList.remove('active');
@@ -357,16 +362,43 @@ $newGameBtn.addEventListener('click', () => {
 });
 $overlayNewBtn.addEventListener('click', startFresh);
 
+function clearShare() {
+  $shareQr.replaceChildren();
+  $shareCodeInput.value = '';
+  shareLink = '';
+}
+
+function renderShareQr(link) {
+  $shareQr.replaceChildren();
+  $shareQrError.hidden = true;
+  $shareQrError.textContent = '';
+  $shareQrHint.hidden = false;
+  try {
+    const svg = qrToSvg(encodeQr(link), { label: 'คิวอาร์โค้ดสำหรับสายลับ' });
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    const node = doc.documentElement;
+    if (!node || node.tagName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) {
+      throw new Error('svg');
+    }
+    $shareQr.appendChild(document.importNode(node, true));
+  } catch {
+    $shareQrHint.hidden = true;
+    $shareQrError.hidden = false;
+    $shareQrError.textContent = 'สร้างคิวอาร์ไม่ได้ — ใช้ปุ่มคัดลอกลิงก์หรือรหัสด้านล่าง';
+  }
+}
+
 function openShare() {
   const code = encodeGame(state);
-  const link = buildShareLink(code, { origin: location.origin, pathname: location.pathname });
-  $shareLinkInput.value = link;
+  shareLink = buildShareLink(code, { origin: location.origin, pathname: location.pathname });
   $shareCodeInput.value = code;
+  renderShareQr(shareLink);
   openDialog($shareOverlay);
 }
 
 function closeShare() {
   closeDialog($shareOverlay);
+  clearShare();
 }
 
 async function copyText(text, btn) {
@@ -394,7 +426,7 @@ async function copyText(text, btn) {
 $shareBtn.addEventListener('click', openShare);
 $shareCloseBtn.addEventListener('click', closeShare);
 $shareOverlay.addEventListener('click', (e) => { if (e.target === $shareOverlay) closeShare(); });
-$copyLinkBtn.addEventListener('click', () => copyText($shareLinkInput.value, $copyLinkBtn));
+$copyLinkBtn.addEventListener('click', () => { if (shareLink) copyText(shareLink, $copyLinkBtn); });
 $copyCodeBtn.addEventListener('click', () => copyText($shareCodeInput.value, $copyCodeBtn));
 
 $overlay.addEventListener('click', (e) => {
