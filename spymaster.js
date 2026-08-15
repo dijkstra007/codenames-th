@@ -1,5 +1,6 @@
 import { COLOR_MARK, countKey } from './game.js';
 import { decodeGame, extractCode } from './share.js';
+import { appendWordStack } from './word-ui.js';
 
 const $importScreen = document.getElementById('importScreen');
 const $importError  = document.getElementById('importError');
@@ -25,10 +26,7 @@ function render(game) {
     mark.textContent = COLOR_MARK[color];
     cell.appendChild(mark);
 
-    const word = document.createElement('span');
-    word.className = 'key-word';
-    word.textContent = game.words[i];
-    cell.appendChild(word);
+    appendWordStack(cell, game.words[i], 'key-word');
 
     $spyBoard.appendChild(cell);
   }
