@@ -1,113 +1,162 @@
 import { THAI_WORDS } from './words.js';
+import {
+  COLOR_ARIA,
+  COLOR_MARK,
+  applyReveal,
+  canUndo,
+  countRemaining,
+  createBoard,
+  otherTeam,
+  undoReveal,
+} from './game.js';
+import { buildShareLink, encodeGame } from './share.js';
 
-// --- Game state ---
-const state = {
-  words: [],         // 25 words
-  key: [],           // 25 colors: 'red' | 'blue' | 'neutral' | 'assassin'
-  revealed: [],      // 25 booleans
-  firstTeam: 'red',  // who has 9 cards
-  currentTurn: 'red',
-  gameOver: false,
-  winner: null,
+const STRICT_KEY = 'codenames-th-strict';
+
+function loadStrict() {
+  try {
+    const v = localStorage.getItem(STRICT_KEY);
+    if (v === null) return true;
+    return v === '1';
+  } catch {
+    return true;
+  }
+}
+
+function saveStrict(on) {
+  try { localStorage.setItem(STRICT_KEY, on ? '1' : '0'); } catch { /* ignore */ }
+}
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
+// --- Game + UI state ---
+const ui = {
   flipped: false,
+  strict: loadStrict(),
 };
+let state = createBoard(THAI_WORDS);
 
 // --- DOM refs ---
-const $board        = document.getElementById('board');
-const $keyGrid      = document.getElementById('keyGrid');
-const $boardStage   = document.getElementById('boardStage');
-const $redLeft      = document.getElementById('redLeft');
-const $blueLeft     = document.getElementById('blueLeft');
-const $turnRedBtn   = document.getElementById('turnRedBtn');
-const $turnBlueBtn  = document.getElementById('turnBlueBtn');
-const $flipBtn      = document.getElementById('flipBtn');
-const $flipLabel    = document.getElementById('flipLabel');
-const $newGameBtn   = document.getElementById('newGameBtn');
+const $board         = document.getElementById('board');
+const $keyGrid       = document.getElementById('keyGrid');
+const $boardStage    = document.getElementById('boardStage');
+const $keyBoard      = document.getElementById('keyBoard');
+const $redLeft       = document.getElementById('redLeft');
+const $blueLeft      = document.getElementById('blueLeft');
+const $turnRedBtn    = document.getElementById('turnRedBtn');
+const $turnBlueBtn   = document.getElementById('turnBlueBtn');
+const $redStartTag   = document.getElementById('redStartTag');
+const $blueStartTag  = document.getElementById('blueStartTag');
+const $flipBtn       = document.getElementById('flipBtn');
+const $flipLabel     = document.getElementById('flipLabel');
+const $newGameBtn    = document.getElementById('newGameBtn');
 const $overlayNewBtn = document.getElementById('overlayNewBtn');
-const $overlay      = document.getElementById('overlay');
-const $overlayCard  = document.getElementById('overlayCard');
-const $overlayTitle = document.getElementById('overlayTitle');
-const $overlaySub   = document.getElementById('overlaySub');
-const $shareBtn        = document.getElementById('shareBtn');
-const $shareOverlay    = document.getElementById('shareOverlay');
-const $shareLinkInput  = document.getElementById('shareLinkInput');
-const $shareCodeInput  = document.getElementById('shareCodeInput');
-const $copyLinkBtn     = document.getElementById('copyLinkBtn');
-const $copyCodeBtn     = document.getElementById('copyCodeBtn');
-const $shareCloseBtn   = document.getElementById('shareCloseBtn');
+const $overlay       = document.getElementById('overlay');
+const $overlayCard   = document.getElementById('overlayCard');
+const $overlayTitle  = document.getElementById('overlayTitle');
+const $overlaySub    = document.getElementById('overlaySub');
+const $shareBtn      = document.getElementById('shareBtn');
+const $shareOverlay  = document.getElementById('shareOverlay');
+const $shareLinkInput = document.getElementById('shareLinkInput');
+const $shareCodeInput = document.getElementById('shareCodeInput');
+const $copyLinkBtn   = document.getElementById('copyLinkBtn');
+const $copyCodeBtn   = document.getElementById('copyCodeBtn');
+const $shareCloseBtn = document.getElementById('shareCloseBtn');
+const $startBanner   = document.getElementById('startBanner');
+const $turnLive      = document.getElementById('turnLive');
+const $clueInput     = document.getElementById('clueInput');
+const $guessesInput  = document.getElementById('guessesInput');
+const $undoBtn       = document.getElementById('undoBtn');
+const $strictBtn     = document.getElementById('strictBtn');
 
-// --- Share encoding ---
-// Encodes {w: [25 Thai words], k: "rbnarbnb..."} as URL-safe Base64.
-// k uses single letters: r=red, b=blue, n=neutral, a=assassin.
-const COLOR_TO_CHAR = { red: 'r', blue: 'b', neutral: 'n', assassin: 'a' };
+// --- Dialogs ---
+let activeDialog = null;
+let flipTimer = 0;
 
-function encodeGame() {
-  const k = state.key.map(c => COLOR_TO_CHAR[c]).join('');
-  const json = JSON.stringify({ w: state.words, k });
-  // UTF-8 safe base64
-  const utf8 = new TextEncoder().encode(json);
-  let binary = '';
-  for (const byte of utf8) binary += String.fromCharCode(byte);
-  const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return b64;
+function focusableIn(root) {
+  return [...root.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((el) => !el.closest('[hidden]') && el.getAttribute('aria-hidden') !== 'true');
 }
 
-function buildShareLink(code) {
-  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-  return base + 'spymaster.html#' + code;
+function openDialog(overlay) {
+  const panel = overlay.querySelector('[role="dialog"]');
+  const lastFocus = document.activeElement;
+  overlay.hidden = false;
+  activeDialog = { overlay, panel, lastFocus };
+  const list = focusableIn(panel);
+  const button = list.find((el) => el.tagName === 'BUTTON');
+  (button || list[0] || panel).focus();
 }
 
-// --- Helpers ---
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+function closeDialog(overlay, { restore = true } = {}) {
+  if (overlay.hidden) return;
+  overlay.hidden = true;
+  if (activeDialog && activeDialog.overlay === overlay) {
+    const el = activeDialog.lastFocus;
+    activeDialog = null;
+    if (restore && el && typeof el.focus === 'function') el.focus();
   }
-  return a;
+}
+
+function parseGuesses() {
+  const v = $guessesInput.value;
+  if (v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function clearClue() {
+  $clueInput.value = '';
+  $guessesInput.value = '';
+}
+
+function startBannerText(team) {
+  return team === 'red' ? 'ทีมแดงเริ่มก่อน · 9 ใบ' : 'ทีมน้ำเงินเริ่มก่อน · 9 ใบ';
+}
+
+function turnLiveText() {
+  const team = state.currentTurn === 'red' ? 'แดง' : 'น้ำเงิน';
+  return 'เทิร์นทีม' + team;
 }
 
 function newGame() {
-  state.words = shuffle(THAI_WORDS).slice(0, 25);
-
-  state.firstTeam   = Math.random() < 0.5 ? 'red' : 'blue';
-  state.currentTurn = state.firstTeam;
-  const secondTeam  = state.firstTeam === 'red' ? 'blue' : 'red';
-
-  const colors = [];
-  for (let i = 0; i < 9; i++) colors.push(state.firstTeam);
-  for (let i = 0; i < 8; i++) colors.push(secondTeam);
-  for (let i = 0; i < 7; i++) colors.push('neutral');
-  colors.push('assassin');
-  state.key = shuffle(colors);
-
-  state.revealed = Array(25).fill(false);
-  state.gameOver = false;
-  state.winner = null;
-
-  // Auto-hide key on new game so spymaster can reveal fresh
-  setFlipped(false);
-
-  $overlay.hidden = true;
+  state = createBoard(THAI_WORDS);
+  ui.flipped = false;
+  clearClue();
+  closeDialog($shareOverlay, { restore: false });
+  closeDialog($overlay, { restore: false });
+  $boardStage.classList.remove('flipped', 'flipping');
+  $flipBtn.classList.remove('active');
+  $flipBtn.setAttribute('aria-pressed', 'false');
+  $flipLabel.textContent = 'ดูกุญแจสายลับ';
+  $board.setAttribute('aria-hidden', 'false');
+  $keyBoard.setAttribute('aria-hidden', 'true');
   renderBoard();
   renderKey();
   renderStatus();
 }
 
 function renderBoard() {
-  $board.innerHTML = '';
+  $board.replaceChildren();
   for (let i = 0; i < 25; i++) {
     const c = document.createElement('div');
     c.className = 'card';
-    c.dataset.index = i;
+    c.dataset.index = String(i);
     c.setAttribute('role', 'button');
-    c.setAttribute('tabindex', '0');
-    c.setAttribute('aria-label', state.words[i]);
 
     const word = document.createElement('span');
     word.className = 'word';
     word.textContent = state.words[i];
     c.appendChild(word);
+
+    const mark = document.createElement('span');
+    mark.className = 'team-mark';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.hidden = true;
+    c.appendChild(mark);
 
     applyCardVisual(c, i);
     attachCardHandlers(c, i);
@@ -116,37 +165,72 @@ function renderBoard() {
 }
 
 function applyCardVisual(cardEl, i) {
-  cardEl.classList.remove('red','blue','neutral','assassin','revealed');
-  if (state.revealed[i]) {
-    cardEl.classList.add('revealed', state.key[i]);
+  cardEl.classList.remove('red', 'blue', 'neutral', 'assassin', 'revealed');
+  const mark = cardEl.querySelector('.team-mark');
+  const revealed = state.revealed[i];
+  if (revealed) {
+    const color = state.key[i];
+    cardEl.classList.add('revealed', color);
+    cardEl.tabIndex = -1;
+    cardEl.setAttribute('aria-label', `${state.words[i]} — ${COLOR_ARIA[color]} เปิดแล้ว`);
+    if (mark) {
+      mark.textContent = COLOR_MARK[color];
+      mark.hidden = false;
+    }
+  } else {
+    cardEl.tabIndex = ui.flipped ? -1 : 0;
+    cardEl.setAttribute('aria-label', state.words[i]);
+    if (mark) {
+      mark.textContent = '';
+      mark.hidden = true;
+    }
   }
 }
 
 function renderKey() {
-  $keyGrid.innerHTML = '';
+  $keyGrid.replaceChildren();
   for (let i = 0; i < 25; i++) {
     const cell = document.createElement('div');
-    cell.className = 'key-cell ' + state.key[i];
+    const color = state.key[i];
+    cell.className = 'key-cell ' + color;
     if (state.revealed[i]) cell.classList.add('done');
-    cell.textContent = state.words[i];
+
+    const mark = document.createElement('span');
+    mark.className = 'team-mark';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = COLOR_MARK[color];
+    cell.appendChild(mark);
+
+    const word = document.createElement('span');
+    word.className = 'key-word';
+    word.textContent = state.words[i];
+    cell.appendChild(word);
+
     $keyGrid.appendChild(cell);
   }
 }
 
 function renderStatus() {
-  // Remaining counts
-  let redLeft = 0, blueLeft = 0;
-  for (let i = 0; i < 25; i++) {
-    if (state.revealed[i]) continue;
-    if (state.key[i] === 'red')  redLeft++;
-    if (state.key[i] === 'blue') blueLeft++;
-  }
-  $redLeft.textContent  = redLeft;
-  $blueLeft.textContent = blueLeft;
+  const left = countRemaining(state.key, state.revealed);
+  $redLeft.textContent = left.red;
+  $blueLeft.textContent = left.blue;
 
-  // Turn highlight
-  $turnRedBtn.classList.toggle('active',  state.currentTurn === 'red');
+  $turnRedBtn.classList.toggle('active', state.currentTurn === 'red');
   $turnBlueBtn.classList.toggle('active', state.currentTurn === 'blue');
+  $turnRedBtn.setAttribute('aria-pressed', String(state.currentTurn === 'red'));
+  $turnBlueBtn.setAttribute('aria-pressed', String(state.currentTurn === 'blue'));
+
+  $redStartTag.hidden = state.firstTeam !== 'red';
+  $blueStartTag.hidden = state.firstTeam !== 'blue';
+
+  $startBanner.textContent = startBannerText(state.firstTeam);
+  $startBanner.className = 'start-banner ' + state.firstTeam;
+  $turnLive.textContent = turnLiveText();
+
+  $strictBtn.classList.toggle('active', ui.strict);
+  $strictBtn.setAttribute('aria-pressed', String(ui.strict));
+
+  $undoBtn.disabled = !canUndo(state);
 }
 
 function attachCardHandlers(cardEl, i) {
@@ -160,114 +244,149 @@ function attachCardHandlers(cardEl, i) {
 }
 
 function revealCard(i) {
-  if (state.gameOver || state.revealed[i]) return;
-  // Prevent revealing while the board is flipped (key side is visible)
-  if (state.flipped) return;
+  if (state.gameOver || state.revealed[i] || ui.flipped) return;
 
-  state.revealed[i] = true;
+  const guessesBefore = parseGuesses();
+  const clueBefore = $clueInput.value;
+  const result = applyReveal(state, i, { strict: ui.strict });
+  if (!result.applied) return;
+
+  state = result.state;
+  if (state.lastReveal) {
+    state.lastReveal = { ...state.lastReveal, guessesBefore, clueBefore };
+  }
+
   const cardEl = $board.children[i];
-  cardEl.classList.add('revealing');
+  if (!prefersReducedMotion()) cardEl.classList.add('revealing');
   applyCardVisual(cardEl, i);
-  setTimeout(() => cardEl.classList.remove('revealing'), 360);
+  window.setTimeout(() => cardEl.classList.remove('revealing'), 360);
 
-  // Incrementally update just this one key cell (avoid rebuilding all 25)
   const keyCell = $keyGrid.children[i];
   if (keyCell) keyCell.classList.add('done');
 
-  const color = state.key[i];
-
-  if (color === 'assassin') {
-    const loser  = state.currentTurn;
-    const winner = loser === 'red' ? 'blue' : 'red';
-    endGame(winner, 'ทีม' + (loser === 'red' ? 'แดง' : 'น้ำเงิน') + 'แตะนักฆ่า — แพ้ทันที');
-  } else {
-    const redDone  = state.key.every((c, idx) => c !== 'red'  || state.revealed[idx]);
-    const blueDone = state.key.every((c, idx) => c !== 'blue' || state.revealed[idx]);
-    if (redDone)       endGame('red',  'ทีมแดงเปิดการ์ดครบแล้ว');
-    else if (blueDone) endGame('blue', 'ทีมน้ำเงินเปิดการ์ดครบแล้ว');
-    // NOTE: Turn does NOT auto-switch — users toggle manually
+  if (result.color === state.lastReveal?.previousTurn && guessesBefore !== null && !state.gameOver) {
+    const next = Math.max(0, guessesBefore - 1);
+    $guessesInput.value = String(next);
+    if (next === 0 && ui.strict) {
+      state = { ...state, currentTurn: otherTeam(state.currentTurn) };
+      state.lastReveal = { ...state.lastReveal, endedTurn: true };
+    }
   }
 
+  if (state.lastReveal?.endedTurn) clearClue();
+
   renderStatus();
+
+  if (state.gameOver) {
+    showVictory(state.winner, result.reason);
+  }
 }
 
-function endGame(winner, reason) {
-  state.gameOver = true;
-  state.winner = winner;
-  $overlayCard.classList.remove('red','blue');
+function showVictory(winner, reason) {
+  $overlayCard.classList.remove('red', 'blue');
   $overlayCard.classList.add(winner);
   $overlayTitle.textContent = winner === 'red' ? 'ทีมแดงชนะ' : 'ทีมน้ำเงินชนะ';
-  $overlaySub.textContent   = reason || '';
-  $overlay.hidden = false;
+  $overlaySub.textContent = reason || '';
+  openDialog($overlay);
 }
 
-// --- Flip control ---
 function setFlipped(on) {
-  state.flipped = on;
+  ui.flipped = on;
   $boardStage.classList.toggle('flipped', on);
   $flipBtn.classList.toggle('active', on);
+  $flipBtn.setAttribute('aria-pressed', String(on));
   $flipLabel.textContent = on ? 'ซ่อนกุญแจ' : 'ดูกุญแจสายลับ';
   $board.setAttribute('aria-hidden', on ? 'true' : 'false');
-  document.getElementById('keyBoard').setAttribute('aria-hidden', on ? 'false' : 'true');
+  $keyBoard.setAttribute('aria-hidden', on ? 'false' : 'true');
+
+  $boardStage.classList.add('flipping');
+  window.clearTimeout(flipTimer);
+  const ms = prefersReducedMotion() ? 0 : 700;
+  flipTimer = window.setTimeout(() => $boardStage.classList.remove('flipping'), ms + 50);
+
+  for (let i = 0; i < $board.children.length; i++) {
+    applyCardVisual($board.children[i], i);
+  }
 }
 
-$flipBtn.addEventListener('click', () => setFlipped(!state.flipped));
-// Esc to quickly hide the key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && state.flipped) setFlipped(false);
-});
+$flipBtn.addEventListener('click', () => setFlipped(!ui.flipped));
 
-// --- Turn buttons ---
 $turnRedBtn.addEventListener('click', () => {
   if (state.gameOver) return;
-  state.currentTurn = 'red';
+  if (state.currentTurn !== 'red') clearClue();
+  state = { ...state, currentTurn: 'red' };
   renderStatus();
 });
 $turnBlueBtn.addEventListener('click', () => {
   if (state.gameOver) return;
-  state.currentTurn = 'blue';
+  if (state.currentTurn !== 'blue') clearClue();
+  state = { ...state, currentTurn: 'blue' };
   renderStatus();
 });
 
-// --- New Game ---
+$strictBtn.addEventListener('click', () => {
+  ui.strict = !ui.strict;
+  saveStrict(ui.strict);
+  renderStatus();
+});
+
+$undoBtn.addEventListener('click', () => {
+  if (!canUndo(state)) return;
+  const snap = state.lastReveal;
+  const index = snap.index;
+  state = undoReveal(state);
+  if (snap.clueBefore != null) $clueInput.value = snap.clueBefore;
+  if (snap.guessesBefore == null) $guessesInput.value = '';
+  else $guessesInput.value = String(snap.guessesBefore);
+
+  const cardEl = $board.children[index];
+  if (cardEl) applyCardVisual(cardEl, index);
+  const keyCell = $keyGrid.children[index];
+  if (keyCell) keyCell.classList.remove('done');
+  renderStatus();
+});
+
 function startFresh() {
   newGame();
 }
 $newGameBtn.addEventListener('click', () => {
-  if (!state.gameOver && state.revealed.some(r => r)) {
+  if (!state.gameOver && state.revealed.some(Boolean)) {
     if (!confirm('เริ่มเกมใหม่? การเล่นปัจจุบันจะหายไป')) return;
   }
   startFresh();
 });
 $overlayNewBtn.addEventListener('click', startFresh);
 
-// --- Share flow ---
 function openShare() {
-  const code = encodeGame();
-  const link = buildShareLink(code);
+  const code = encodeGame(state);
+  const link = buildShareLink(code, { origin: location.origin, pathname: location.pathname });
   $shareLinkInput.value = link;
   $shareCodeInput.value = code;
-  $shareOverlay.hidden = false;
+  openDialog($shareOverlay);
 }
 
 function closeShare() {
-  $shareOverlay.hidden = true;
+  closeDialog($shareOverlay);
 }
 
 async function copyText(text, btn) {
+  let ok = false;
   try {
     await navigator.clipboard.writeText(text);
+    ok = true;
   } catch {
-    // Fallback
     const ta = document.createElement('textarea');
     ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); } catch {}
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
     document.body.removeChild(ta);
   }
   const orig = btn.textContent;
-  btn.textContent = 'คัดลอกแล้ว ✓';
+  btn.textContent = ok ? 'คัดลอกแล้ว ✓' : 'คัดลอกไม่ได้';
   btn.disabled = true;
   setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1400);
 }
@@ -277,9 +396,40 @@ $shareCloseBtn.addEventListener('click', closeShare);
 $shareOverlay.addEventListener('click', (e) => { if (e.target === $shareOverlay) closeShare(); });
 $copyLinkBtn.addEventListener('click', () => copyText($shareLinkInput.value, $copyLinkBtn));
 $copyCodeBtn.addEventListener('click', () => copyText($shareCodeInput.value, $copyCodeBtn));
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !$shareOverlay.hidden) closeShare();
+
+$overlay.addEventListener('click', (e) => {
+  if (e.target === $overlay) closeDialog($overlay);
 });
 
-// --- Boot ---
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && activeDialog && !activeDialog.overlay.hidden) {
+    const list = focusableIn(activeDialog.panel);
+    if (list.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = list[0];
+    const last = list[list.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+    return;
+  }
+
+  if (e.key !== 'Escape') return;
+  if (!$shareOverlay.hidden) {
+    closeShare();
+    return;
+  }
+  if (!$overlay.hidden) {
+    closeDialog($overlay);
+    return;
+  }
+  if (ui.flipped) setFlipped(false);
+});
+
 newGame();
