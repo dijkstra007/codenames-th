@@ -510,6 +510,38 @@ body {
   border-radius: 10px;
   margin: 0 0 8px;
 }
+.share-qr {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 6px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 14px;
+}
+.share-qr svg {
+  width: min(240px, 100%);
+  height: auto;
+  display: block;
+}
+.share-card .share-qr-hint {
+  text-align: center;
+  color: var(--text-mute);
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.share-card .share-qr-error {
+  color: #ff6b7a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0 0 10px;
+}
+.share-qr-actions {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 6px;
+}
 .share-label {
   display: block;
   font-size: 12px;

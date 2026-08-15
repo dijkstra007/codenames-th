@@ -102,20 +102,21 @@
 
 <!-- Share modal -->
 <div class="overlay" id="shareOverlay" hidden>
-  <div class="overlay-card share-card" role="dialog" aria-modal="true" aria-labelledby="shareTitle" aria-describedby="shareHelp shareSpoiler" tabindex="-1">
+  <div class="overlay-card share-card" role="dialog" aria-modal="true" aria-labelledby="shareTitle" aria-describedby="shareHelp shareSpoiler shareQrHint" tabindex="-1">
     <h2 id="shareTitle">แชร์ให้สายลับ</h2>
-    <p class="share-help" id="shareHelp">ส่งลิงก์นี้หรือรหัสด้านล่างให้สายลับเปิดในเครื่องอื่น เพื่อดูสีของการ์ดทั้งหมด</p>
-    <p class="share-spoiler" id="shareSpoiler">ลิงก์นี้คือกุญแจทั้งกระดาน — ใครเปิดจะเห็นสีทุกใบ ส่งให้สายลับเท่านั้น อย่าส่งในกลุ่มผู้เล่น</p>
+    <p class="share-help" id="shareHelp">ให้สายลับสแกนคิวอาร์นี้ด้วยโทรศัพท์ เพื่อเปิดกุญแจบนอีกเครื่อง</p>
+    <p class="share-spoiler" id="shareSpoiler">คิวอาร์นี้คือกุญแจทั้งกระดาน — ใครสแกนจะเห็นสีทุกใบ ส่งให้สายลับเท่านั้น อย่าโชว์ในกลุ่มผู้เล่น</p>
 
-    <label class="share-label" for="shareLinkInput">ลิงก์สำหรับสายลับ</label>
-    <div class="share-row">
-      <input type="text" id="shareLinkInput" readonly />
-      <button class="btn btn-primary" id="copyLinkBtn">คัดลอกลิงก์</button>
+    <div class="share-qr" id="shareQr"></div>
+    <p class="share-qr-hint" id="shareQrHint">สแกนด้วยกล้องโทรศัพท์</p>
+    <p class="share-qr-error" id="shareQrError" hidden></p>
+    <div class="share-qr-actions">
+      <button class="btn btn-ghost" id="copyLinkBtn">คัดลอกลิงก์</button>
     </div>
 
     <label class="share-label" for="shareCodeInput">หรือคัดลอกรหัส Base64</label>
     <div class="share-row">
-      <textarea id="shareCodeInput" readonly rows="3"></textarea>
+      <textarea id="shareCodeInput" readonly rows="2"></textarea>
       <button class="btn btn-ghost" id="copyCodeBtn">คัดลอกรหัส</button>
     </div>
 

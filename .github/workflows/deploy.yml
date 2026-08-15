@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-      - run: node --test tests/game.test.js tests/share.test.js
+      - run: node --test tests/game.test.js tests/share.test.js tests/qr.test.js
 
   deploy:
     needs: test
@@ -38,7 +38,7 @@ jobs:
       - name: Stage site files
         run: |
           mkdir -p dist
-          cp index.html spymaster.html app.js game.js share.js spymaster.js words.js styles.css .nojekyll dist/
+          cp index.html spymaster.html app.js game.js share.js qr.js spymaster.js words.js styles.css .nojekyll dist/
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist
