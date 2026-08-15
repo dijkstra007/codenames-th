@@ -1,4 +1,5 @@
-import { THAI_WORDS } from './words.js';
+import { THAI_WORDS, spokenLabel } from './words.js';
+import { appendWordStack } from './word-ui.js';
 import {
   COLOR_ARIA,
   COLOR_MARK,
@@ -152,10 +153,7 @@ function renderBoard() {
     c.dataset.index = String(i);
     c.setAttribute('role', 'button');
 
-    const word = document.createElement('span');
-    word.className = 'word';
-    word.textContent = state.words[i];
-    c.appendChild(word);
+    appendWordStack(c, state.words[i], 'word');
 
     const mark = document.createElement('span');
     mark.className = 'team-mark';
@@ -177,14 +175,14 @@ function applyCardVisual(cardEl, i) {
     const color = state.key[i];
     cardEl.classList.add('revealed', color);
     cardEl.tabIndex = -1;
-    cardEl.setAttribute('aria-label', `${state.words[i]} — ${COLOR_ARIA[color]} เปิดแล้ว`);
+    cardEl.setAttribute('aria-label', `${spokenLabel(state.words[i])} — ${COLOR_ARIA[color]} เปิดแล้ว`);
     if (mark) {
       mark.textContent = COLOR_MARK[color];
       mark.hidden = false;
     }
   } else {
     cardEl.tabIndex = ui.flipped ? -1 : 0;
-    cardEl.setAttribute('aria-label', state.words[i]);
+    cardEl.setAttribute('aria-label', spokenLabel(state.words[i]));
     if (mark) {
       mark.textContent = '';
       mark.hidden = true;
@@ -206,10 +204,7 @@ function renderKey() {
     mark.textContent = COLOR_MARK[color];
     cell.appendChild(mark);
 
-    const word = document.createElement('span');
-    word.className = 'key-word';
-    word.textContent = state.words[i];
-    cell.appendChild(word);
+    appendWordStack(cell, state.words[i], 'key-word');
 
     $keyGrid.appendChild(cell);
   }

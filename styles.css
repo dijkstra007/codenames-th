@@ -39,6 +39,7 @@
 
   --font-thai: 'Noto Sans Thai', 'Sukhumvit Set', -apple-system, system-ui, sans-serif;
   --font-display: 'Noto Serif Thai', 'Noto Sans Thai', 'Sukhumvit Set', serif;
+  --font-en: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -321,9 +322,10 @@ body {
   color: #1a1a1f;
   border-radius: var(--radius-lg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
+  padding: 8px 10px 10px;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: clamp(16px, 2.2vw, 28px);
@@ -347,6 +349,35 @@ body {
   z-index: 0;
 }
 .card > * { position: relative; z-index: 1; }
+
+.word-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18em;
+  min-width: 0;
+  max-width: 100%;
+}
+.word,
+.key-word {
+  display: block;
+  max-width: 100%;
+}
+.word-en {
+  font-family: var(--font-en);
+  font-size: clamp(9px, 1.15vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  opacity: 0.58;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.card.revealed .word-en,
+.key-cell .word-en { opacity: 0.82; }
+.key-cell.neutral .word-en { opacity: 0.7; }
 .card:hover:not(.revealed) { transform: translateY(-2px); box-shadow: var(--shadow-2); }
 .card:focus-visible {
   outline: 3px solid #1a1a1f;
@@ -414,6 +445,7 @@ body {
 .key-cell {
   border-radius: var(--radius-lg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
@@ -604,7 +636,8 @@ body {
   .play-bar { padding: 10px 14px; }
   .board-wrap { padding: 12px; gap: 10px; }
   .board-front, .board-back .key-grid { gap: 8px; }
-  .card { font-size: clamp(13px, 3.4vw, 20px); padding: 6px 4px; }
+  .card { font-size: clamp(13px, 3.4vw, 20px); padding: 6px 4px 8px; }
+  .word-en { font-size: clamp(8px, 2.1vw, 11px); }
   .card.revealed { padding-top: 16px; }
   .key-cell { font-size: clamp(11px, 2.8vw, 16px); padding: 16px 4px 5px; border-radius: 10px; }
   .key-cell.done::after { font-size: 22px; }
