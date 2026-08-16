@@ -41,13 +41,16 @@ describe('encode / decode', () => {
     assert.deepEqual(decoded.key, payload.key);
   });
 
-  it('builds a spymaster hash link under a project path', () => {
+  it('builds a spymaster query link under a project path', () => {
     const code = encodeGame(validPayload());
     const link = buildShareLink(code, {
       origin: 'https://example.github.io',
       pathname: '/codenames-th/index.html',
     });
-    assert.equal(link, 'https://example.github.io/codenames-th/spymaster.html#' + code);
+    assert.equal(
+      link,
+      'https://example.github.io/codenames-th/spymaster.html?c=' + encodeURIComponent(code),
+    );
   });
 
   it('extracts a code from a pasted URL or raw hash', () => {
@@ -55,6 +58,14 @@ describe('encode / decode', () => {
     assert.equal(
       extractCode('https://x.github.io/codenames-th/spymaster.html#THECODE'),
       'THECODE',
+    );
+    assert.equal(
+      extractCode('https://x.github.io/codenames-th/spymaster.html?c=QUERYCODE'),
+      'QUERYCODE',
+    );
+    assert.equal(
+      extractCode('https://x.github.io/codenames-th/spymaster.html?c=QUERYCODE#OLD'),
+      'QUERYCODE',
     );
     assert.equal(extractCode(''), '');
   });

@@ -26,10 +26,23 @@ let currentCode = '';
 let currentGame = null;
 let masked = emptyMasked();
 
+function codeFromLocation() {
+  const q = new URLSearchParams(location.search).get('c');
+  if (q && q.trim()) return q.trim();
+  return location.hash.replace(/^#/, '').trim();
+}
+
+function setLocationCode(code) {
+  const next = location.pathname + '?c=' + encodeURIComponent(code);
+  if (location.pathname + location.search !== next) {
+    history.replaceState(null, '', next);
+  }
+}
+
 function cellLabel(game, index, isMasked) {
   const word = game.words[index];
   const team = COLOR_ARIA[game.key[index]] || '';
-  const status = isMasked ? 'เปิดแล้ว' : 'ยังไม่เปิด';
+  const status = isMasked ? 'เปิดแล้ว ถูกบังไว้' : 'ยังไม่เปิด';
   return `${word} · ${team} · ${status} — แตะเพื่อสลับ`;
 }
 
@@ -56,10 +69,9 @@ function render(game) {
   $spyBoard.replaceChildren();
   for (let i = 0; i < 25; i++) {
     const color = game.key[i];
-    const cell = document.createElement('div');
+    const cell = document.createElement('button');
+    cell.type = 'button';
     cell.className = 'key-cell spy-key-cell ' + color;
-    cell.role = 'button';
-    cell.tabIndex = 0;
     applyCellMask(cell, game, i, masked[i]);
 
     const mark = document.createElement('span');
@@ -70,12 +82,10 @@ function render(game) {
 
     appendWordStack(cell, game.words[i], 'key-word');
 
-    cell.addEventListener('click', () => onToggle(i));
-    cell.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onToggle(i);
-      }
+    // click covers mouse + most mobile taps; pointerup helps stubborn WebViews
+    cell.addEventListener('click', (e) => {
+      e.preventDefault();
+      onToggle(i);
     });
 
     $spyBoard.appendChild(cell);
@@ -117,16 +127,14 @@ function tryLoadFromCode(rawInput) {
   }
   try {
     const game = decodeGame(code);
-    if (location.hash !== '#' + code) {
-      history.replaceState(null, '', location.pathname + '#' + code);
-    }
+    setLocationCode(code);
     showGame(game, code);
   } catch (e) {
     showImport('ไม่สามารถอ่านรหัสได้: ' + (e && e.message ? e.message : 'รูปแบบไม่ถูกต้อง'));
   }
 }
 
-const initial = location.hash.replace(/^#/, '').trim();
+const initial = codeFromLocation();
 if (initial) tryLoadFromCode(initial);
 else showImport('');
 
@@ -153,7 +161,10 @@ if ($clearMaskBtn) {
   });
 }
 
-window.addEventListener('hashchange', () => {
-  const h = location.hash.replace(/^#/, '').trim();
-  if (h) tryLoadFromCode(h);
-});
+function reloadFromLocation() {
+  const code = codeFromLocation();
+  if (code) tryLoadFromCode(code);
+}
+
+window.addEventListener('hashchange', reloadFromLocation);
+window.addEventListener('popstate', reloadFromLocation);

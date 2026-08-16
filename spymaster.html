@@ -61,12 +61,20 @@
     flex: 1;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-rows: repeat(5, minmax(52px, 1fr));
     gap: 10px;
     max-width: 1400px;
     width: 100%;
     margin: 0 auto;
-    min-height: 0;
+    min-height: min(70vh, 640px);
+  }
+
+  .spy-hint {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0;
   }
 
   .import-screen {
@@ -171,8 +179,9 @@
   </div>
 </section>
 
-<div class="spy-warn" id="spyWarn" hidden>⚠︎ เฉพาะสายลับเท่านั้น — อย่าให้ผู้เล่นคนอื่นเห็นหน้าจอนี้ · แตะคำที่ผู้เล่นเปิดแล้วเพื่อบัง (แตะอีกครั้งเพื่อเลิกบัง)</div>
+<div class="spy-warn" id="spyWarn" hidden>⚠︎ เฉพาะสายลับเท่านั้น — อย่าให้ผู้เล่นคนอื่นเห็นหน้าจอนี้</div>
 <main class="spy-main" id="spyMain" hidden>
+  <p class="spy-hint">แตะคำที่ผู้เล่นเปิดแล้วเพื่อบังคำ · แตะอีกครั้งเพื่อเลิกบัง</p>
   <div class="spy-board" id="spyBoard"></div>
 </main>
 

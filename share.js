@@ -116,11 +116,26 @@ export function extractCode(raw) {
   if (typeof raw !== 'string') return '';
   const s = raw.trim();
   if (!s) return '';
+
+  // Full or relative URLs: prefer ?c= (QR-safe), then #hash
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s) || s.startsWith('/') || s.includes('?') || s.includes('#')) {
+    try {
+      const url = new URL(s, 'https://example.invalid/');
+      const fromQuery = url.searchParams.get('c');
+      if (fromQuery && fromQuery.trim()) return fromQuery.trim();
+      const fromHash = url.hash.replace(/^#/, '').trim();
+      if (fromHash) return fromHash;
+    } catch {
+      /* fall through */
+    }
+  }
+
   if (s.includes('#')) return s.slice(s.indexOf('#') + 1).trim();
   return s;
 }
 
 export function buildShareLink(code, { origin, pathname } = {}) {
   const base = origin + pathname.replace(/[^/]*$/, '');
-  return base + 'spymaster.html#' + code;
+  // Query param survives more QR / in-app browsers than a #hash fragment.
+  return base + 'spymaster.html?c=' + encodeURIComponent(code);
 }
