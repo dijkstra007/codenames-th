@@ -154,7 +154,8 @@
     </div>
   </div>
   <div class="controls" id="spyControls" hidden>
-    <button class="btn btn-ghost" id="changeCodeBtn">เปลี่ยนรหัส</button>
+    <button class="btn btn-ghost" id="clearMaskBtn" type="button" disabled title="ล้างเครื่องหมายการ์ดที่เปิดแล้ว">ล้างการ์ดที่เปิดแล้ว</button>
+    <button class="btn btn-ghost" id="changeCodeBtn" type="button">เปลี่ยนรหัส</button>
   </div>
 </header>
 
@@ -170,7 +171,7 @@
   </div>
 </section>
 
-<div class="spy-warn" id="spyWarn" hidden>⚠︎ เฉพาะสายลับเท่านั้น — อย่าให้ผู้เล่นคนอื่นเห็นหน้าจอนี้</div>
+<div class="spy-warn" id="spyWarn" hidden>⚠︎ เฉพาะสายลับเท่านั้น — อย่าให้ผู้เล่นคนอื่นเห็นหน้าจอนี้ · แตะคำที่ผู้เล่นเปิดแล้วเพื่อบัง (แตะอีกครั้งเพื่อเลิกบัง)</div>
 <main class="spy-main" id="spyMain" hidden>
   <div class="spy-board" id="spyBoard"></div>
 </main>

@@ -475,6 +475,25 @@ body {
   z-index: 3;
 }
 
+/* Spymaster remote board: tap to mask guessed words */
+.spy-key-cell {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.spy-key-cell:hover:not(.done) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  filter: brightness(1.06);
+}
+.spy-key-cell:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  z-index: 1;
+}
+.spy-key-cell.done:hover {
+  filter: brightness(1.08);
+}
+
 /* ---------- overlay ---------- */
 .overlay {
   position: fixed; inset: 0;
