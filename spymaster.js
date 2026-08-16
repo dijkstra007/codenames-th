@@ -8,7 +8,7 @@ import {
   loadMasked,
   saveMasked,
   toggleMasked,
-} from './spy-mask.js?v=spy-tap-2';
+} from './spy-mask.js?v=spy-tap-3';
 import { appendWordStack } from './word-ui.js';
 
 const $importScreen = document.getElementById('importScreen');
@@ -52,7 +52,7 @@ function setLocationCode(code) {
 function cellLabel(game, index, isMasked) {
   const word = game.words[index];
   const team = COLOR_ARIA[game.key[index]] || '';
-  const status = isMasked ? 'เปิดแล้ว ถูกบังไว้' : 'ยังไม่เปิด';
+  const status = isMasked ? 'เปิดแล้ว' : 'ยังไม่เปิด';
   return `${word} · ${team} · ${status} — แตะเพื่อสลับ`;
 }
 
