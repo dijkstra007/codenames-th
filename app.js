@@ -191,13 +191,53 @@ function applyCardVisual(cardEl, i) {
   }
 }
 
+function keyCellLabel(i) {
+  const word = spokenLabel(state.words[i]);
+  const team = COLOR_ARIA[state.key[i]] || '';
+  if (state.revealed[i]) {
+    const canUnmask = canUndo(state) && state.lastReveal?.index === i;
+    return canUnmask
+      ? `${word} · ${team} · เปิดแล้ว — แตะเพื่อเลิกทำ`
+      : `${word} · ${team} · เปิดแล้ว`;
+  }
+  return `${word} · ${team} · ยังไม่เปิด — แตะเพื่อเปิด`;
+}
+
+function applyKeyCellVisual(cell, i) {
+  const revealed = state.revealed[i];
+  cell.classList.toggle('done', revealed);
+  cell.setAttribute('aria-pressed', String(revealed));
+  cell.setAttribute('aria-label', keyCellLabel(i));
+  // Interactive while the key face is showing (or always focusable for a11y when flipped).
+  cell.tabIndex = ui.flipped && !state.gameOver ? 0 : -1;
+}
+
+function attachKeyHandlers(cell, i) {
+  cell.addEventListener('click', () => onKeyCellActivate(i));
+  cell.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onKeyCellActivate(i);
+    }
+  });
+}
+
+function onKeyCellActivate(i) {
+  if (!ui.flipped || state.gameOver) return;
+  if (state.revealed[i]) {
+    if (canUndo(state) && state.lastReveal?.index === i) undoLastReveal();
+    return;
+  }
+  revealCard(i);
+}
+
 function renderKey() {
   $keyGrid.replaceChildren();
   for (let i = 0; i < 25; i++) {
     const cell = document.createElement('div');
     const color = state.key[i];
-    cell.className = 'key-cell ' + color;
-    if (state.revealed[i]) cell.classList.add('done');
+    cell.className = 'key-cell spy-key-cell ' + color;
+    cell.setAttribute('role', 'button');
 
     const mark = document.createElement('span');
     mark.className = 'team-mark';
@@ -206,6 +246,8 @@ function renderKey() {
     cell.appendChild(mark);
 
     appendWordStack(cell, state.words[i], 'key-word');
+    applyKeyCellVisual(cell, i);
+    attachKeyHandlers(cell, i);
 
     $keyGrid.appendChild(cell);
   }
@@ -245,7 +287,8 @@ function attachCardHandlers(cardEl, i) {
 }
 
 function revealCard(i) {
-  if (state.gameOver || state.revealed[i] || ui.flipped) return;
+  // Allow reveal from the front board or from the flipped key (spy marks a guess).
+  if (state.gameOver || state.revealed[i]) return;
 
   const guessesBefore = parseGuesses();
   const clueBefore = $clueInput.value;
@@ -258,12 +301,14 @@ function revealCard(i) {
   }
 
   const cardEl = $board.children[i];
-  if (!prefersReducedMotion()) cardEl.classList.add('revealing');
-  applyCardVisual(cardEl, i);
-  window.setTimeout(() => cardEl.classList.remove('revealing'), 360);
+  if (cardEl) {
+    if (!prefersReducedMotion()) cardEl.classList.add('revealing');
+    applyCardVisual(cardEl, i);
+    window.setTimeout(() => cardEl.classList.remove('revealing'), 360);
+  }
 
   const keyCell = $keyGrid.children[i];
-  if (keyCell) keyCell.classList.add('done');
+  if (keyCell) applyKeyCellVisual(keyCell, i);
 
   if (result.color === state.lastReveal?.previousTurn && guessesBefore !== null && !state.gameOver) {
     const next = Math.max(0, guessesBefore - 1);
@@ -276,6 +321,10 @@ function revealCard(i) {
 
   if (state.lastReveal?.endedTurn) clearClue();
 
+  // Refresh key labels (undo affordance on the last reveal) and status.
+  for (let k = 0; k < $keyGrid.children.length; k++) {
+    applyKeyCellVisual($keyGrid.children[k], k);
+  }
   renderStatus();
 
   if (state.gameOver) {
@@ -308,6 +357,9 @@ function setFlipped(on) {
   for (let i = 0; i < $board.children.length; i++) {
     applyCardVisual($board.children[i], i);
   }
+  for (let i = 0; i < $keyGrid.children.length; i++) {
+    applyKeyCellVisual($keyGrid.children[i], i);
+  }
 }
 
 $flipBtn.addEventListener('click', () => setFlipped(!ui.flipped));
@@ -331,7 +383,7 @@ $strictBtn.addEventListener('click', () => {
   renderStatus();
 });
 
-$undoBtn.addEventListener('click', () => {
+function undoLastReveal() {
   if (!canUndo(state)) return;
   const snap = state.lastReveal;
   const index = snap.index;
@@ -342,10 +394,13 @@ $undoBtn.addEventListener('click', () => {
 
   const cardEl = $board.children[index];
   if (cardEl) applyCardVisual(cardEl, index);
-  const keyCell = $keyGrid.children[index];
-  if (keyCell) keyCell.classList.remove('done');
+  for (let k = 0; k < $keyGrid.children.length; k++) {
+    applyKeyCellVisual($keyGrid.children[k], k);
+  }
   renderStatus();
-});
+}
+
+$undoBtn.addEventListener('click', undoLastReveal);
 
 function startFresh() {
   newGame();
