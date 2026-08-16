@@ -55,11 +55,12 @@ const $blueStartTag  = document.getElementById('blueStartTag');
 const $flipBtn       = document.getElementById('flipBtn');
 const $flipLabel     = document.getElementById('flipLabel');
 const $newGameBtn    = document.getElementById('newGameBtn');
-const $overlayNewBtn = document.getElementById('overlayNewBtn');
-const $overlay       = document.getElementById('overlay');
-const $overlayCard   = document.getElementById('overlayCard');
-const $overlayTitle  = document.getElementById('overlayTitle');
-const $overlaySub    = document.getElementById('overlaySub');
+const $overlayNewBtn   = document.getElementById('overlayNewBtn');
+const $overlayCloseBtn = document.getElementById('overlayCloseBtn');
+const $overlay         = document.getElementById('overlay');
+const $overlayCard     = document.getElementById('overlayCard');
+const $overlayTitle    = document.getElementById('overlayTitle');
+const $overlaySub      = document.getElementById('overlaySub');
 const $shareBtn      = document.getElementById('shareBtn');
 const $shareOverlay  = document.getElementById('shareOverlay');
 const $shareQr       = document.getElementById('shareQr');
@@ -356,6 +357,7 @@ $newGameBtn.addEventListener('click', () => {
   startFresh();
 });
 $overlayNewBtn.addEventListener('click', startFresh);
+$overlayCloseBtn.addEventListener('click', () => closeDialog($overlay));
 
 function clearShare() {
   $shareQr.replaceChildren();
