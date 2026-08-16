@@ -5,7 +5,9 @@ import {
   MASK_STORAGE_PREFIX,
   clearMasked,
   clearSavedMasked,
+  createMemoryStorage,
   emptyMasked,
+  getSafeStorage,
   loadMasked,
   saveMasked,
   storageKey,
@@ -90,5 +92,26 @@ describe('spy-mask', () => {
     saveMasked(store, 'c', masked);
     clearSavedMasked(store, 'c');
     assert.deepEqual(loadMasked(store, 'c'), emptyMasked());
+  });
+
+  it('getSafeStorage falls back when storage throws', () => {
+    const throwing = {
+      setItem() { throw new Error('blocked'); },
+      removeItem() { throw new Error('blocked'); },
+      getItem() { throw new Error('blocked'); },
+    };
+    const safe = getSafeStorage(throwing);
+    const masked = emptyMasked();
+    masked[4] = true;
+    saveMasked(safe, 'x', masked);
+    assert.deepEqual(loadMasked(safe, 'x'), masked);
+  });
+
+  it('createMemoryStorage round-trips independently', () => {
+    const a = createMemoryStorage();
+    const b = createMemoryStorage();
+    a.setItem('k', '1');
+    assert.equal(a.getItem('k'), '1');
+    assert.equal(b.getItem('k'), null);
   });
 });

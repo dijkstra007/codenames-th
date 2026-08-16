@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Noto+Serif+Thai:wght@700;800&display=swap" rel="stylesheet" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a1f'/%3E%3Cpath d='M8 10h16M8 16h16M8 22h10' stroke='%23e0b23c' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="styles.css?v=spy-tap-2" />
 <style>
   /* Spymaster-only tweaks */
   .spy-topbar {
@@ -67,6 +67,7 @@
     width: 100%;
     margin: 0 auto;
     min-height: min(70vh, 640px);
+    touch-action: manipulation;
   }
 
   .spy-hint {
@@ -138,12 +139,13 @@
   }
 
   @media (max-width: 900px) {
-    .spy-topbar { padding: 12px 14px; }
+    .spy-topbar { padding: 12px 14px; flex-wrap: wrap; }
     .spy-warn { margin: 10px 14px 0; font-size: 12px; padding: 8px 12px; }
     .spy-main { padding: 12px; }
-    .spy-board { gap: 8px; }
+    .spy-board { gap: 8px; min-height: min(62vh, 520px); }
     .import-card { padding: 24px; }
     .import-card h2 { font-size: 22px; }
+    #spyControls { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
   }
 </style>
 </head>
@@ -187,6 +189,6 @@
 
 <footer class="site-foot">โปรเจกต์แฟนที่ไม่เป็นทางการ ไม่เกี่ยวข้องกับ Czech Games Edition</footer>
 
-<script src="spymaster.js" type="module"></script>
+<script src="spymaster.js?v=spy-tap-2" type="module"></script>
 </body>
 </html>

@@ -4,10 +4,11 @@ import {
   clearMasked,
   clearSavedMasked,
   emptyMasked,
+  getSafeStorage,
   loadMasked,
   saveMasked,
   toggleMasked,
-} from './spy-mask.js';
+} from './spy-mask.js?v=spy-tap-2';
 import { appendWordStack } from './word-ui.js';
 
 const $importScreen = document.getElementById('importScreen');
@@ -25,6 +26,15 @@ const $spySub       = document.getElementById('spySub');
 let currentCode = '';
 let currentGame = null;
 let masked = emptyMasked();
+let storage = getSafeStorage(null);
+
+function refreshStorage() {
+  try {
+    storage = getSafeStorage(window.sessionStorage);
+  } catch {
+    storage = getSafeStorage(null);
+  }
+}
 
 function codeFromLocation() {
   const q = new URLSearchParams(location.search).get('c');
@@ -54,15 +64,28 @@ function applyCellMask(cell, game, index, isMasked) {
 
 function setMasked(next) {
   masked = next;
-  if (currentCode) saveMasked(sessionStorage, currentCode, masked);
+  if (currentCode) saveMasked(storage, currentCode, masked);
   if ($clearMaskBtn) $clearMaskBtn.disabled = !masked.some(Boolean);
 }
 
+let lastTap = { index: -1, at: 0 };
+
 function onToggle(index) {
-  if (!currentGame) return;
+  if (!currentGame || !Number.isInteger(index)) return;
+  const now = Date.now();
+  // Pointer + click can both fire on some WebViews; ignore the duplicate.
+  if (lastTap.index === index && now - lastTap.at < 400) return;
+  lastTap = { index, at: now };
   setMasked(toggleMasked(masked, index));
-  const cell = $spyBoard.children[index];
+  const cell = $spyBoard.querySelector('[data-index="' + index + '"]');
   if (cell) applyCellMask(cell, currentGame, index, masked[index]);
+}
+
+function cellIndexFromEvent(e) {
+  const el = e.target && e.target.closest ? e.target.closest('[data-index]') : null;
+  if (!el || !$spyBoard.contains(el)) return null;
+  const n = Number(el.getAttribute('data-index'));
+  return Number.isInteger(n) ? n : null;
 }
 
 function render(game) {
@@ -72,6 +95,7 @@ function render(game) {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'key-cell spy-key-cell ' + color;
+    cell.dataset.index = String(i);
     applyCellMask(cell, game, i, masked[i]);
 
     const mark = document.createElement('span');
@@ -82,11 +106,11 @@ function render(game) {
 
     appendWordStack(cell, game.words[i], 'key-word');
 
-    // click covers mouse + most mobile taps; pointerup helps stubborn WebViews
-    cell.addEventListener('click', (e) => {
-      e.preventDefault();
-      onToggle(i);
-    });
+    const cover = document.createElement('span');
+    cover.className = 'spy-mask-cover';
+    cover.setAttribute('aria-hidden', 'true');
+    cover.textContent = '✓';
+    cell.appendChild(cover);
 
     $spyBoard.appendChild(cell);
   }
@@ -98,7 +122,8 @@ function render(game) {
 function showGame(game, code) {
   currentGame = game;
   currentCode = code;
-  masked = loadMasked(sessionStorage, code);
+  refreshStorage();
+  masked = loadMasked(storage, code);
   $importScreen.hidden = true;
   $spyWarn.hidden = false;
   $spyMain.hidden = false;
@@ -134,6 +159,8 @@ function tryLoadFromCode(rawInput) {
   }
 }
 
+refreshStorage();
+
 const initial = codeFromLocation();
 if (initial) tryLoadFromCode(initial);
 else showImport('');
@@ -156,10 +183,35 @@ if ($clearMaskBtn) {
   $clearMaskBtn.addEventListener('click', () => {
     if (!currentGame || !currentCode) return;
     setMasked(clearMasked());
-    clearSavedMasked(sessionStorage, currentCode);
+    clearSavedMasked(storage, currentCode);
     render(currentGame);
   });
 }
+
+// One board-level tap path so child text / overlays cannot swallow hits.
+const tapStart = { x: 0, y: 0, id: null };
+
+$spyBoard.addEventListener('pointerdown', (e) => {
+  if (e.isPrimary === false) return;
+  tapStart.x = e.clientX;
+  tapStart.y = e.clientY;
+  tapStart.id = e.pointerId;
+}, { passive: true });
+
+$spyBoard.addEventListener('pointerup', (e) => {
+  if (tapStart.id != null && e.pointerId !== tapStart.id) return;
+  tapStart.id = null;
+  if (Math.abs(e.clientX - tapStart.x) > 14 || Math.abs(e.clientY - tapStart.y) > 14) return;
+  const index = cellIndexFromEvent(e);
+  if (index == null) return;
+  onToggle(index);
+}, { passive: true });
+
+$spyBoard.addEventListener('click', (e) => {
+  const index = cellIndexFromEvent(e);
+  if (index == null) return;
+  onToggle(index);
+});
 
 function reloadFromLocation() {
   const code = codeFromLocation();
