@@ -38,7 +38,7 @@ jobs:
       - name: Stage site files
         run: |
           mkdir -p dist
-          cp index.html spymaster.html app.js game.js share.js qr.js spymaster.js words.js word-ui.js styles.css .nojekyll dist/
+          cp index.html spymaster.html app.js game.js share.js qr.js spymaster.js spy-mask.js words.js word-ui.js styles.css .nojekyll dist/
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist
