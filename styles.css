@@ -479,7 +479,7 @@ button.key-cell {
 .key-cell.assassin  { background: linear-gradient(180deg, #1a1a20, #000); border-color: var(--assassin-ring); }
 .key-cell.done .word-stack,
 .key-cell.done .team-mark {
-  opacity: 0;
+  visibility: hidden;
 }
 .key-cell.done::after {
   content: '✓';
@@ -497,20 +497,48 @@ button.key-cell {
 .spy-key-cell {
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.25);
 }
-.spy-key-cell:hover:not(.done) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-  filter: brightness(1.06);
+.spy-key-cell * {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.spy-mask-cover {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 800;
+  pointer-events: none;
+}
+.spy-key-cell.done .spy-mask-cover { display: flex; }
+.spy-key-cell.done::after { content: none; }
+@media (hover: hover) and (pointer: fine) {
+  .spy-key-cell {
+    transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+  }
+  .spy-key-cell:hover:not(.done) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-2);
+    filter: brightness(1.06);
+  }
+  .spy-key-cell.done:hover {
+    filter: brightness(1.08);
+  }
 }
 .spy-key-cell:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
   z-index: 1;
-}
-.spy-key-cell.done:hover {
-  filter: brightness(1.08);
 }
 .spy-key-cell:active {
   filter: brightness(0.92);

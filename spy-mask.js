@@ -67,3 +67,35 @@ export function clearSavedMasked(storage, code) {
     /* ignore */
   }
 }
+
+/**
+ * sessionStorage itself can throw in private / in-app browsers
+ * (before getItem is even called). Probe it; fall back to memory.
+ */
+export function createMemoryStorage() {
+  const map = new Map();
+  return {
+    getItem(k) {
+      return map.has(k) ? map.get(k) : null;
+    },
+    setItem(k, v) {
+      map.set(k, String(v));
+    },
+    removeItem(k) {
+      map.delete(k);
+    },
+  };
+}
+
+export function getSafeStorage(preferred) {
+  try {
+    const s = preferred;
+    if (!s) return createMemoryStorage();
+    const probe = MASK_STORAGE_PREFIX + '__probe';
+    s.setItem(probe, '1');
+    s.removeItem(probe);
+    return s;
+  } catch {
+    return createMemoryStorage();
+  }
+}
